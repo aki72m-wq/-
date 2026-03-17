@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学マス プレイアブルキャラ ティア表</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    min-height: 100vh;
+    color: #fff;
+    padding: 20px;
+  }
+
+  header { text-align: center; margin-bottom: 24px; padding: 16px; }
+  header h1 {
+    font-size: 2rem;
+    background: linear-gradient(90deg, #f9a8d4, #c084fc, #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 4px;
+    margin-bottom: 6px;
+  }
+  header p { color: #a5b4fc; font-size: 0.85rem; letter-spacing: 2px; }
+  .stars { color: #f9a8d4; font-size: 1.2rem; letter-spacing: 6px; margin-bottom: 6px; }
+
+  /* ---- コントロールバー ---- */
+  .controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    max-width: 960px;
+    margin: 0 auto 20px;
+  }
+
+  .btn {
+    border: none;
+    border-radius: 24px;
+    padding: 9px 22px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .btn:hover { transform: scale(1.06); }
+
+  .btn-add {
+    background: linear-gradient(135deg,#34d399,#059669);
+    color: #fff;
+    box-shadow: 0 3px 12px rgba(52,211,153,0.35);
+  }
+  .btn-remove {
+    background: linear-gradient(135deg,#f87171,#dc2626);
+    color: #fff;
+    box-shadow: 0 3px 12px rgba(248,113,113,0.35);
+  }
+  .btn-reset {
+    background: linear-gradient(135deg,#c084fc,#818cf8);
+    color: #fff;
+    box-shadow: 0 3px 12px rgba(192,132,252,0.35);
+  }
+
+  /* ---- ティア表 ---- */
+  .tier-table {
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto 28px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  .tier-row {
+    display: flex;
+    align-items: stretch;
+    border-bottom: 2px solid rgba(255,255,255,0.08);
+    min-height: 90px;
+    position: relative;
+  }
+  .tier-row:last-child { border-bottom: none; }
+  .tier-row.drag-over {
+    outline: 2px dashed #c084fc;
+    background: rgba(192,132,252,0.18) !important;
+  }
+
+  /* ラベル部分 */
+  .tier-label-wrap {
+    width: 80px;
+    min-width: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    gap: 4px;
+    padding: 6px 4px;
+  }
+
+  .tier-label-text {
+    font-size: 1.6rem;
+    font-weight: 900;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    cursor: pointer;
+    line-height: 1;
+    text-align: center;
+    min-width: 36px;
+    border-radius: 6px;
+    padding: 2px 4px;
+    transition: background 0.15s;
+  }
+  .tier-label-text:hover { background: rgba(255,255,255,0.15); }
+
+  /* インライン編集input */
+  .tier-label-input {
+    font-size: 1.3rem;
+    font-weight: 900;
+    width: 68px;
+    text-align: center;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 6px;
+    color: #fff;
+    padding: 2px 4px;
+    outline: none;
+  }
+
+  .tier-del-btn {
+    font-size: 0.65rem;
+    background: rgba(255,255,255,0.12);
+    border: none;
+    color: rgba(255,255,255,0.6);
+    border-radius: 4px;
+    padding: 2px 5px;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .tier-del-btn:hover { background: #f87171; color:#fff; }
+
+  .tier-cards {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    flex: 1;
+    min-height: 90px;
+  }
+
+  /* ---- キャラカード ---- */
+  .char-card {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    cursor: grab;
+    user-select: none;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.25);
+    touch-action: none;
+    flex-shrink: 0;
+  }
+  .char-card:hover {
+    transform: scale(1.12);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    z-index: 10;
+    border-color: rgba(255,255,255,0.6);
+  }
+  .char-card.dragging { opacity: 0.35; transform: scale(0.9); cursor: grabbing; }
+  .char-card img {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block; border-radius: 50%; pointer-events: none;
+  }
+
+  /* ---- 未配置 ---- */
+  .unranked-section { max-width: 960px; margin: 0 auto 28px; }
+  .unranked-section h2 {
+    color: #a5b4fc; font-size: 0.9rem;
+    letter-spacing: 3px; margin-bottom: 12px; text-align: center;
+  }
+  .unranked-area {
+    background: rgba(255,255,255,0.05);
+    border: 2px dashed rgba(165,180,252,0.3);
+    border-radius: 16px;
+    min-height: 100px;
+    display: flex; flex-wrap: wrap; gap: 10px; padding: 16px;
+    transition: background 0.2s;
+  }
+  .unranked-area.drag-over { background: rgba(192,132,252,0.18); border-color: #c084fc; }
+
+  footer {
+    text-align: center; color: rgba(165,180,252,0.5);
+    font-size: 0.72rem; letter-spacing: 1px; padding-bottom: 20px;
+  }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.4rem; }
+    .char-card { width: 56px; height: 56px; }
+    .tier-label-wrap { width: 60px; min-width: 60px; }
+    .tier-label-text { font-size: 1.2rem; }
+    .tier-label-input { width: 54px; font-size: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="stars">★ ★ ★</div>
+  <h1>学マス Tier List</h1>
+  <p>GAKUEN IDOLMASTER — PLAYABLE CHARACTERS</p>
+</header>
+
+<!-- コントロール -->
+<div class="controls">
+  <button class="btn btn-add"    onclick="addTier()">＋ ランク追加</button>
+  <button class="btn btn-remove" onclick="removeTier()">－ ランク削除</button>
+  <button class="btn btn-reset"  onclick="resetAll()">🔄 リセット</button>
+</div>
+
+<!-- ティア表（JS で動的生成） -->
+<div class="tier-table" id="tier-table"></div>
+
+<!-- 未配置 -->
+<div class="unranked-section">
+  <h2>— 未配置 —</h2>
+  <div class="unranked-area" id="unranked"
+       ondragover="onDragOver(event)" ondragleave="onDragLeave(event)"
+       ondrop="onDrop(event,'unranked')"></div>
+</div>
+
+<footer>ランク名をクリックすると名前を変更できます | ドラッグ＆ドロップでキャラを移動 | 配置は自動保存</footer>
+
+<script>
+// ============================================================
+// キャラクターデータ
+// ============================================================
+const CHARACTERS = [
+  { id:'saki',    name:'花海咲季',     img:'https://imasgk.gamedbs.jp/image/chara/ico/1716383065004_jqgs8evp.webp' },
+  { id:'temari',  name:'月村手毬',     img:'https://imasgk.gamedbs.jp/image/chara/ico/1716383066012_pl265i4v.webp' },
+  { id:'kotone',  name:'藤田ことね',   img:'https://imasgk.gamedbs.jp/image/chara/ico/1716383065001_1y4jq5og.webp' },
+  { id:'mao',     name:'有村麻央',     img:'https://imasgk.gamedbs.jp/image/chara/ico/1716383065000_8lipxk90.webp' },
+  { id:'lilia',   name:'葛城リーリヤ', img:'https://imasgk.gamedbs.jp/image/chara/ico/1716383066008_6xtra214.webp' },
+  { id:'china',   name:'倉本千奈',     img:'https://imasgk.gamedbs.jp/image/chara/ico/1716383066007_omdlry2u.webp' },
+  { id:'seika',   name:'紫雲清夏',     img:'https://imasgk.gamedbs.jp/image/chara/ico/1716383066011_3cr8u2nx.webp' },
+  { id:'hiro',    name:'篠澤広',       img:'https://imasgk.gamedbs.jp/image/chara/ico/1716383066010_c69u4h2i.webp' },
+  { id:'rinami',  name:'姫崎莉波',     img:'https://imasgk.gamedbs.jp/image/chara/ico/1716383065003_4mp19kci.webp' },
+  { id:'yume',    name:'花海佑芽',     img:'https://imasgk.gamedbs.jp/image/chara/ico/1716383065005_np2gwl7o.webp' },
+  { id:'misuzu',  name:'秦谷美鈴',     img:'https://imasgk.gamedbs.jp/image/chara/ico/1716383065002_05ckbrhx.webp' },
+  { id:'sena',    name:'十王星南',     img:'https://imasgk.gamedbs.jp/image/chara/ico/1716383066006_rsqod0n4.webp' },
+  { id:'tsubame', name:'雨夜燕',       img:'https://imasgk.gamedbs.jp/image/chara/ico/1745326455001_6wbuovpf.webp' },
+];
+
+// ============================================================
+// ティア定義（色セット）
+// ============================================================
+const TIER_COLORS = [
+  { bg:'linear-gradient(180deg,#ff4757,#ff6b81)', rowBg:'rgba(255,71,87,0.12)',   textColor:'#fff' },
+  { bg:'linear-gradient(180deg,#ff9f43,#ffbe76)', rowBg:'rgba(255,159,67,0.12)',  textColor:'#fff' },
+  { bg:'linear-gradient(180deg,#f9ca24,#f0e130)', rowBg:'rgba(249,202,36,0.10)',  textColor:'#333' },
+  { bg:'linear-gradient(180deg,#6ab04c,#badc58)', rowBg:'rgba(106,176,76,0.10)',  textColor:'#fff' },
+  { bg:'linear-gradient(180deg,#48dbfb,#7ed6df)', rowBg:'rgba(72,219,251,0.08)',  textColor:'#333' },
+  { bg:'linear-gradient(180deg,#636e72,#b2bec3)', rowBg:'rgba(99,110,114,0.12)',  textColor:'#fff' },
+  { bg:'linear-gradient(180deg,#fd79a8,#e84393)', rowBg:'rgba(253,121,168,0.10)', textColor:'#fff' },
+  { bg:'linear-gradient(180deg,#a29bfe,#6c5ce7)', rowBg:'rgba(162,155,254,0.10)', textColor:'#fff' },
+];
+
+// ============================================================
+// ティア状態
+// ============================================================
+let tiers = [
+  { id:'tier-0', label:'S' },
+  { id:'tier-1', label:'A' },
+  { id:'tier-2', label:'B' },
+  { id:'tier-3', label:'C' },
+  { id:'tier-4', label:'D' },
+  { id:'tier-5', label:'F' },
+];
+let nextTierId = 6; // 次に追加するティアのID番号
+
+// ============================================================
+// ティア表を再描画
+// ============================================================
+function renderTierTable() {
+  const table = document.getElementById('tier-table');
+
+  // 既存の各ティアに入っているカードを保存
+  const savedCards = {};
+  table.querySelectorAll('.tier-row').forEach(row => {
+    const tid = row.dataset.tierId;
+    savedCards[tid] = Array.from(row.querySelectorAll('.char-card'));
+  });
+
+  table.innerHTML = '';
+
+  tiers.forEach((tier, idx) => {
+    const colors = TIER_COLORS[idx % TIER_COLORS.length];
+    const row = document.createElement('div');
+    row.className = 'tier-row';
+    row.dataset.tierId = tier.id;
+    row.style.background = colors.rowBg;
+    row.style.borderBottom = idx < tiers.length - 1
+      ? '2px solid rgba(255,255,255,0.08)' : 'none';
+
+    // ラベル部分
+    const labelWrap = document.createElement('div');
+    labelWrap.className = 'tier-label-wrap';
+    labelWrap.style.background = colors.bg;
+
+    const labelText = document.createElement('div');
+    labelText.className = 'tier-label-text';
+    labelText.style.color = colors.textColor;
+    labelText.textContent = tier.label;
+    labelText.title = 'クリックで名前を変更';
+    labelText.addEventListener('click', () => startEditLabel(tier.id, labelText, colors));
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'tier-del-btn';
+    delBtn.textContent = '✕ 削除';
+    delBtn.title = 'このランクを削除';
+    delBtn.addEventListener('click', () => deleteTier(tier.id));
+
+    labelWrap.appendChild(labelText);
+    labelWrap.appendChild(delBtn);
+
+    // カードエリア
+    const cardsArea = document.createElement('div');
+    cardsArea.className = 'tier-cards';
+    cardsArea.id = 'cards-' + tier.id;
+
+    // ドラッグイベント
+    row.addEventListener('dragover',  e => onDragOver(e));
+    row.addEventListener('dragleave', e => onDragLeave(e));
+    row.addEventListener('drop',      e => onDrop(e, tier.id));
+
+    row.appendChild(labelWrap);
+    row.appendChild(cardsArea);
+    table.appendChild(row);
+
+    // 保存済みカードを復元
+    if (savedCards[tier.id]) {
+      savedCards[tier.id].forEach(c => cardsArea.appendChild(c));
+    }
+  });
+}
+
+// ============================================================
+// ラベル編集
+// ============================================================
+function startEditLabel(tierId, labelTextEl, colors) {
+  const tier = tiers.find(t => t.id === tierId);
+  if (!tier) return;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'tier-label-input';
+  input.value = tier.label;
+  input.maxLength = 8;
+  input.style.color = colors.textColor;
+
+  const parent = labelTextEl.parentNode;
+  parent.replaceChild(input, labelTextEl);
+  input.focus();
+  input.select();
+
+  const commit = () => {
+    const newLabel = input.value.trim() || tier.label;
+    tier.label = newLabel;
+    labelTextEl.textContent = newLabel;
+    parent.replaceChild(labelTextEl, input);
+    saveState();
+  };
+
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = tier.label; input.blur(); }
+  });
+}
+
+// ============================================================
+// ランク追加 / 削除
+// ============================================================
+function addTier() {
+  const newId = 'tier-' + nextTierId++;
+  tiers.push({ id: newId, label: 'NEW' });
+  renderTierTable();
+  saveState();
+  // 新しいランクまでスクロール
+  const newRow = document.querySelector(`[data-tier-id="${newId}"]`);
+  if (newRow) newRow.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+function removeTier() {
+  if (tiers.length <= 1) { alert('最低1つのランクが必要です。'); return; }
+  const last = tiers[tiers.length - 1];
+  // そのランクのカードを未配置へ移動
+  const area = document.getElementById('cards-' + last.id);
+  const unranked = document.getElementById('unranked');
+  if (area) area.querySelectorAll('.char-card').forEach(c => unranked.appendChild(c));
+  tiers.pop();
+  renderTierTable();
+  saveState();
+}
+
+function deleteTier(tierId) {
+  if (tiers.length <= 1) { alert('最低1つのランクが必要です。'); return; }
+  const area = document.getElementById('cards-' + tierId);
+  const unranked = document.getElementById('unranked');
+  if (area) area.querySelectorAll('.char-card').forEach(c => unranked.appendChild(c));
+  tiers = tiers.filter(t => t.id !== tierId);
+  renderTierTable();
+  saveState();
+}
+
+// ============================================================
+// キャラカード生成
+// ============================================================
+function createCard(ch) {
+  const card = document.createElement('div');
+  card.className = 'char-card';
+  card.id = 'card-' + ch.id;
+  card.draggable = true;
+  card.title = ch.name;
+
+  const img = document.createElement('img');
+  img.src = ch.img;
+  img.alt = ch.name;
+  card.appendChild(img);
+
+  // Drag
+  card.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('text/plain', ch.id);
+    setTimeout(() => card.classList.add('dragging'), 0);
+  });
+  card.addEventListener('dragend', () => {
+    card.classList.remove('dragging');
+    saveState();
+  });
+
+  // Touch
+  let clone = null;
+  card.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    clone = card.cloneNode(true);
+    clone.style.cssText = `position:fixed;opacity:0.85;z-index:9999;pointer-events:none;
+      width:68px;height:68px;border-radius:50%;overflow:hidden;
+      left:${t.clientX - 34}px;top:${t.clientY - 34}px;`;
+    document.body.appendChild(clone);
+    card.style.opacity = '0.3';
+  }, {passive:true});
+
+  card.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const t = e.touches[0];
+    if (clone) {
+      clone.style.left = (t.clientX - 34) + 'px';
+      clone.style.top  = (t.clientY - 34) + 'px';
+    }
+  }, {passive:false});
+
+  card.addEventListener('touchend', e => {
+    const t = e.changedTouches[0];
+    if (clone) { clone.remove(); clone = null; }
+    card.style.opacity = '1';
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    const target = el ? (el.closest('.tier-cards') || el.closest('.unranked-area')) : null;
+    if (target) { target.appendChild(card); saveState(); }
+  });
+
+  return card;
+}
+
+// ============================================================
+// ドラッグ＆ドロップ
+// ============================================================
+function onDragOver(e) {
+  e.preventDefault();
+  const area = e.currentTarget.closest('.tier-row') || e.currentTarget;
+  area.classList.add('drag-over');
+}
+function onDragLeave(e) {
+  const area = e.currentTarget.closest('.tier-row') || e.currentTarget;
+  area.classList.remove('drag-over');
+}
+function onDrop(e, tierId) {
+  e.preventDefault();
+  const area = e.currentTarget.closest('.tier-row') || e.currentTarget;
+  area.classList.remove('drag-over');
+  const id = e.dataTransfer.getData('text/plain');
+  const card = document.getElementById('card-' + id);
+  if (!card) return;
+  const target = tierId === 'unranked'
+    ? document.getElementById('unranked')
+    : document.getElementById('cards-' + tierId);
+  if (target) { target.appendChild(card); saveState(); }
+}
+
+// ============================================================
+// 保存 / 読み込み / リセット
+// ============================================================
+function saveState() {
+  const cardPlacement = {};
+  tiers.forEach(tier => {
+    const el = document.getElementById('cards-' + tier.id);
+    cardPlacement[tier.id] = el
+      ? Array.from(el.querySelectorAll('.char-card')).map(c => c.id.replace('card-',''))
+      : [];
+  });
+  const unranked = document.getElementById('unranked');
+  cardPlacement['unranked'] = Array.from(unranked.querySelectorAll('.char-card')).map(c => c.id.replace('card-',''));
+
+  const state = {
+    tiers,
+    nextTierId,
+    cardPlacement,
+  };
+  localStorage.setItem('gakumas_tier_v2', JSON.stringify(state));
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('gakumas_tier_v2');
+    if (!raw) return false;
+    const state = JSON.parse(raw);
+
+    if (state.tiers && Array.isArray(state.tiers)) {
+      tiers = state.tiers;
+    }
+    if (state.nextTierId) nextTierId = state.nextTierId;
+
+    renderTierTable();
+
+    if (state.cardPlacement) {
+      Object.entries(state.cardPlacement).forEach(([zone, ids]) => {
+        const el = zone === 'unranked'
+          ? document.getElementById('unranked')
+          : document.getElementById('cards-' + zone);
+        if (!el) return;
+        ids.forEach(id => {
+          const card = document.getElementById('card-' + id);
+          if (card) el.appendChild(card);
+        });
+      });
+    }
+    return true;
+  } catch(e) { return false; }
+}
+
+function resetAll() {
+  if (!confirm('配置をリセットしますか？\n（ランク構成・名前はそのまま保持されます）')) return;
+  const unranked = document.getElementById('unranked');
+  document.querySelectorAll('.char-card').forEach(c => unranked.appendChild(c));
+  saveState();
+}
+
+// ============================================================
+// 初期化
+// ============================================================
+(function init() {
+  const unranked = document.getElementById('unranked');
+  CHARACTERS.forEach(ch => unranked.appendChild(createCard(ch)));
+
+  const loaded = loadState();
+  if (!loaded) renderTierTable();
+})();
+</script>
+</body>
+</html>
